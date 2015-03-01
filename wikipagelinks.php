@@ -150,7 +150,7 @@ class WikiLinksPlugin {
             $shortcutLink = sprintf( $options['shortcuts'][$prefix],
                 rawurlencode($link));
             $content = str_replace($match, 
-                "<a class="acacha_wiki_link" href='http://acacha.org/mediawiki/index.php/$subtitle'>$subtitle</a>",
+                "<a class='acacha_wiki_link' href='http://acacha.org/mediawiki/index.php/$subtitle'>$subtitle</a>",
                 $content);
             continue; 
 
