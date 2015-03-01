@@ -1,5 +1,12 @@
 <?php
 /*
+
+Adapted by Sergi Tur Badenas: sergiturbadenas@gmail.com
+http://acacha.org
+http://acacha.org/sergitur
+http://acacha.org/blog
+
+
 Plugin Name: Wiki Page Links
 Plugin URI: http://www.flyingsquirrel.ca/index.php/wordpress-plugins/wiki-links/
 Description: Automatically links to pages, wiki-style.
@@ -9,7 +16,7 @@ Author URI: http://www.flyingsquirrel.ca/
 
     Copyright 2008-2011  Darcy Casselman  (email : dscassel@gmail.com)
 
-	This program is free software: you can redistribute it and/or modify
+    This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
     (at your option) any later version.
@@ -35,11 +42,15 @@ class WikiLinksPlugin {
     var $longName = "Wiki Page Links Plugin";
     var $adminOptionsName = "WikiPageLinksPluginAdminOptions";
     
-    var $debug = true;
+    var $debug = false;
 
-	var $defaultShortcuts = array(
-		'wiki' => 'http://en.wikipedia.org/wiki/%s',
-	);
+    var $defaultShortcuts = array(
+        //b = blog 
+        'b' => 'NOT_IMPORTANT_CODE_gets_PERMALINK',
+        'wikipedia' => 'http://en.wikipedia.org/wiki/%s',
+        'wikipediaca' => 'http://ca.wikipedia.org/wiki/%s',
+        'wikipediaes' => 'http://es.wikipedia.org/wiki/%s',
+    );
     
     function log($message) {
         if ($this->debug)
@@ -48,21 +59,21 @@ class WikiLinksPlugin {
     }
     
     //PHP4 constructor
-	function WikiLinksPlugin() {$this->__construct();} 
+    function WikiLinksPlugin() {$this->__construct();} 
     
     //PHP5 constructor
     function __construct() {
-	    // WordPress Hooks
+        // WordPress Hooks
         //add_action('admin_menu', array(&$this, 'addAdminPanel'));  
-		add_filter('the_content', array(&$this, 'wiki_filter'));
-	}
-	
-	function _install() {
-	    $this->log("Wiki Links installed!");
-	}
-	
-	function _uninstall() {
-	    $this->log("Wiki Links uninstalled!");
+        add_filter('the_content', array(&$this, 'wiki_filter'));
+    }
+    
+    function _install() {
+        $this->log("Wiki Links installed!");
+    }
+    
+    function _uninstall() {
+        $this->log("Wiki Links uninstalled!");
     }
     
     /**
@@ -70,71 +81,83 @@ class WikiLinksPlugin {
      * separate out the viewed title from the link name from wikilinks of the form [[link|some user title]]
      */
     function wiki_get_piped_title($link) {
-   		list($link, $title) = split('\|', $link, 2);
-    	if (!$title) $title = $link;
-    	return array($link, $title);
+        list($link, $title) = split('\|', $link, 2);
+        if (!$title) $title = $link;
+        return array($link, $title);
     }
 
-	/* The filter.
-	 * Replaces double brackets with links to pages.
-	 */
-	function wiki_filter($content) {
-		$options = $this->getAdminOptions();
+    /* The filter.
+     * Replaces double brackets with links to pages.
+     */
+    function wiki_filter($content) {
+        $options = $this->getAdminOptions();
 
-		//Match only phrases in double brackets.  A backslash can be
-		//used to escape the sequence, if you want literal double brackets.
-		preg_match_all('/\[\[([^\]]+)\]\]/', $content, $matches);
+        //Match only phrases in double brackets.  A backslash can be
+        //used to escape the sequence, if you want literal double brackets.
+        preg_match_all('/\[\[([^\]]+)\]\]/', $content, $matches);
 
-		//$matches[1] is an array of all the phrases in double brackets.
-		//Dumping all the matches into a hash ensures we only look up
-		//each matching page name once.
-		$links = array();
-		foreach( $matches[1] as $keyword ) {
-			$links[$keyword] = current($matches[0]);
-			next($matches[0]);
-		}
+        //$matches[1] is an array of all the phrases in double brackets.
+        //Dumping all the matches into a hash ensures we only look up
+        //each matching page name once.
+        $links = array();
+        foreach( $matches[1] as $keyword ) {
+            $links[$keyword] = current($matches[0]);
+            next($matches[0]);
+        }
 
-		foreach( $links as $full_link => $match ) {
-			// If the "page title" contains a ':', it *may* be a shortcut
-			// link rather than a page.  Deal with those first.
-			list($prefix, $sublink) = split(':', $full_link, 2);
+        foreach( $links as $full_link => $match ) {
+            // If the "page title" contains a ':', it *may* be a shortcut
+            // link rather than a page.  Deal with those first.
+            list($prefix, $sublink) = split(':', $full_link, 2);
 
-			if ( $sublink ) {
-				if ( array_key_exists($prefix, $options['shortcuts']) ) {
-					list($link, $subtitle) = $this->wiki_get_piped_title($sublink);
-					$shortcutLink = sprintf( $options['shortcuts'][$prefix],
-						rawurlencode($link));
-					$content = str_replace($match, 
-						"<a href='$shortcutLink'>$subtitle</a>",
-						$content);
-					continue;
-				}
-			}
-			
-			list($link, $page_title) = $this->wiki_get_piped_title($full_link);
+            if ( $sublink ) {
+                if ( array_key_exists($prefix, $options['shortcuts']) ) {
+                    if ( $prefix === "b") {
+                        list($link, $page_title) = $this->wiki_get_piped_title($full_link);
 
-			//We have a page link. 
-			//TODO: cut down on db hits and get the list of pages instead.
-			if ( $page = get_page_by_title(html_entity_decode($link, ENT_QUOTES)) ) {
-				$content = str_replace($match, 
-					"<a href='". get_permalink($page->ID) ."'>$page_title</a>",
-					$content);
-			} else if ( is_user_logged_in() ) {
-				//Add a link to create the page if it doesn't exist.
-				//TODO: limit showing the link to users who can create posts.
+                        //We have a page link. 
+                        //TODO: cut down on db hits and get the list of pages instead.
+                        if ( $page = get_page_by_title(html_entity_decode($link, ENT_QUOTES)) ) {
+                            $content = str_replace($match, 
+                                "<a href='". get_permalink($page->ID) ."'>$page_title</a>",
+                                $content);
+                        } else if ( is_user_logged_in() ) {
+                            //Add a link to create the page if it doesn't exist.
+                            //TODO: limit showing the link to users who can create posts.
 
-				$home = get_option('siteurl');
-				$encodedlink = urlencode($link);
-				$content = str_replace($match, "{$page_title}[<a href='$home/wp-admin/post-new.php?post_type=page&post_title=$encodedlink' class='nonexistant_page' title='Create this page (requires a valid \"contributer\" account)'>?</a>]", $content);
+                            $home = get_option('siteurl');
+                            $encodedlink = urlencode($link);
+                            $content = str_replace($match, "{$page_title}[<a href='$home/wp-admin/post-new.php?post_type=page&post_title=$encodedlink' class='nonexistant_page' title='Create this page (requires a valid \"contributer\" account)'>?</a>]", $content);
 
-			} else {
-				
-				$content = str_replace($match, $page_title, $content);
-			}
-		}
-		
-		return $content;
-	}
+                        } else {
+                            
+                            $content = str_replace($match, $page_title, $content);
+                        }
+                    } else {
+                        list($link, $subtitle) = $this->wiki_get_piped_title($sublink);
+                        $shortcutLink = sprintf( $options['shortcuts'][$prefix],
+                            rawurlencode($link));
+                        $content = str_replace($match, 
+                            "<a href='$shortcutLink'>$subtitle</a>",
+                            $content);
+                        continue;    
+                    }
+                    
+                }
+            }
+            
+            list($link, $subtitle) = $this->wiki_get_piped_title($sublink);
+            $shortcutLink = sprintf( $options['shortcuts'][$prefix],
+                rawurlencode($link));
+            $content = str_replace($match, 
+                "<a class="acacha_wiki_link" href='http://acacha.org/mediawiki/index.php/$subtitle'>$subtitle</a>",
+                $content);
+            continue; 
+
+        }
+        
+        return $content;
+    }
 
     function getAdminOptions() {
         //defaults
@@ -142,15 +165,15 @@ class WikiLinksPlugin {
             'shortcuts' => $this->defaultShortcuts,
         );
     
-    	$savedOptions = get_option($this->adminOptionsName);
-    	
-		if (!empty($savedOptions)) {
-			foreach ($savedOptions as $key => $value) {
-			    $options[$key] = $value;
-			}
-		} 
-		
-		return $options;
+        $savedOptions = get_option($this->adminOptionsName);
+        
+        if (!empty($savedOptions)) {
+            foreach ($savedOptions as $key => $value) {
+                $options[$key] = $value;
+            }
+        } 
+        
+        return $options;
     
     }
     
@@ -216,7 +239,7 @@ class WikiLinksPlugin {
 
             <p class="submit">
             <input type="submit" 
-			    name="<?php echo $submitButton; ?>" 
+                name="<?php echo $submitButton; ?>" 
                 value="<?php _e('Save Changes'); ?>" />
             </p>
 
