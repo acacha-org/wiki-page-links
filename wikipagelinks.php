@@ -45,11 +45,11 @@ class WikiLinksPlugin {
     var $debug = false;
 
     var $defaultShortcuts = array(
-        //b = blog 
+        //b = this blog => text between [[]] is a page on this blog
         'b' => 'NOT_IMPORTANT_CODE_gets_PERMALINK',
-        'wikipedia' => 'http://en.wikipedia.org/wiki/%s',
-        'wikipediaca' => 'http://ca.wikipedia.org/wiki/%s',
-        'wikipediaes' => 'http://es.wikipedia.org/wiki/%s',
+        'en' => 'http://en.wikipedia.org/wiki/%s',
+        'ca' => 'http://ca.wikipedia.org/wiki/%s',
+        'e' => 'http://es.wikipedia.org/wiki/%s',
     );
     
     function log($message) {
@@ -113,13 +113,13 @@ class WikiLinksPlugin {
             if ( $sublink ) {
                 if ( array_key_exists($prefix, $options['shortcuts']) ) {
                     if ( $prefix === "b") {
-                        list($link, $page_title) = $this->wiki_get_piped_title($full_link);
+                        list($link, $subtitle) = $this->wiki_get_piped_title($sublink);
 
                         //We have a page link. 
                         //TODO: cut down on db hits and get the list of pages instead.
                         if ( $page = get_page_by_title(html_entity_decode($link, ENT_QUOTES)) ) {
                             $content = str_replace($match, 
-                                "<a href='". get_permalink($page->ID) ."'>$page_title</a>",
+                                "<a href='". get_permalink($page->ID) ."'>$subtitle</a>",
                                 $content);
                         } else if ( is_user_logged_in() ) {
                             //Add a link to create the page if it doesn't exist.
@@ -127,12 +127,13 @@ class WikiLinksPlugin {
 
                             $home = get_option('siteurl');
                             $encodedlink = urlencode($link);
-                            $content = str_replace($match, "{$page_title}[<a href='$home/wp-admin/post-new.php?post_type=page&post_title=$encodedlink' class='nonexistant_page' title='Create this page (requires a valid \"contributer\" account)'>?</a>]", $content);
+                            $content = str_replace($match, "{$subtitle}[<a href='$home/wp-admin/post-new.php?post_type=page&post_title=$encodedlink' class='nonexistant_page' title='Create this page (requires a valid \"contributer\" account)'>?</a>]", $content);
 
                         } else {
                             
-                            $content = str_replace($match, $page_title, $content);
+                            $content = str_replace($match, $subtitle, $content);
                         }
+                        continue; 
                     } else {
                         list($link, $subtitle) = $this->wiki_get_piped_title($sublink);
                         $shortcutLink = sprintf( $options['shortcuts'][$prefix],
