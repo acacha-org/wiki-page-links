@@ -146,11 +146,9 @@ class WikiLinksPlugin {
                 }
             }
             
-            list($link, $subtitle) = $this->wiki_get_piped_title($sublink);
-            $shortcutLink = sprintf( $options['shortcuts'][$prefix],
-                rawurlencode($link));
+            list($link, $page_title) = $this->wiki_get_piped_title($full_link);
             $content = str_replace($match, 
-                "<a class='acacha_wiki_link' href='http://acacha.org/mediawiki/index.php/$subtitle'>$subtitle</a>",
+                "<a class='acacha_wiki_link' href='http://acacha.org/mediawiki/index.php/$page_title'>$page_title</a>",
                 $content);
             continue; 
 
